@@ -52,6 +52,16 @@ GitHub Pages. De aanmeldingen staan in een Supabase-database (ook gratis).
 > De camera werkt alleen op een `https`-adres. Op GitHub Pages is dat automatisch
 > zo; test je lokaal, gebruik dan het handmatige invoerveld.
 
+## Onderhoud
+
+De JavaScript-bibliotheken staan in `assets/vendor/` in plaats van op een CDN,
+zodat een storing elders de scanner op de avond zelf niet plat kan leggen.
+
+Achter de bestandsnamen in de HTML staat `?v=2`. Pas je `style.css`,
+`config.js` of een bibliotheek aan, **hoog dat nummer dan op** in alle drie
+de HTML-bestanden. Anders blijven browsers tot tien minuten de oude versie
+gebruiken.
+
 ## Een gast is zijn ticketlink kwijt
 
 Zoek de gast op in de gastenlijst. Het ticket zit op `ticket.html?t=<token>`;
