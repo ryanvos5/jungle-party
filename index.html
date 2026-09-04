@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jungle Party — Aanmelden</title>
+<meta name="description" content="Meld je aan voor de Jungle Party en ontvang je persoonlijke ticket.">
+<meta name="theme-color" content="#050f0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B4%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="brand">
+    <span class="brand__kicker">Je bent uitgenodigd</span>
+    <h1 class="brand__title">Jungle<br>Party</h1>
+    <p class="brand__sub">Vul je gegevens in en je krijgt meteen je persoonlijke ticket met QR-code.</p>
+  </header>
+
+  <div class="card">
+    <h2 class="card__title">Aanmelden</h2>
+    <p class="card__hint">Alle velden zijn verplicht. Je ticket is persoonlijk en werkt één keer.</p>
+
+    <div class="alert alert--error" id="formError"></div>
+
+    <form id="form" novalidate>
+      <div class="row">
+        <div class="field">
+          <label for="first_name">Voornaam</label>
+          <input type="text" id="first_name" name="first_name" autocomplete="given-name"
+                 placeholder="Elisa" maxlength="60" required>
+          <div class="field__error" id="err_first_name"></div>
+        </div>
+
+        <div class="field">
+          <label for="last_name">Achternaam</label>
+          <input type="text" id="last_name" name="last_name" autocomplete="family-name"
+                 placeholder="de Vries" maxlength="60" required>
+          <div class="field__error" id="err_last_name"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">E-mailadres</label>
+        <input type="email" id="email" name="email" autocomplete="email" inputmode="email"
+               placeholder="elisa@voorbeeld.nl" maxlength="160" required>
+        <div class="field__error" id="err_email"></div>
+      </div>
+
+      <div class="field">
+        <label for="phone">Telefoonnummer</label>
+        <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel"
+               placeholder="06 12 34 56 78" maxlength="20" required>
+        <div class="field__error" id="err_phone"></div>
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">
+        <span id="submitLabel">Maak mijn ticket</span>
+      </button>
+    </form>
+  </div>
+
+  <p class="footer">Je gegevens worden alleen gebruikt voor de gastenlijst van dit feest.</p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="assets/config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var form       = document.getElementById('form');
+  var btn        = document.getElementById('submitBtn');
+  var btnLabel   = document.getElementById('submitLabel');
+  var formError  = document.getElementById('formError');
+
+  var FIELDS = ['first_name', 'last_name', 'email', 'phone'];
+
+  // Wie zich al eerder aanmeldde op dit apparaat, sturen we direct
+  // door naar het eigen ticket in plaats van een dubbele aanmelding.
+  var known = localStorage.getItem('jungle_token');
+  if (known) {
+    location.replace('ticket.html?t=' + encodeURIComponent(known));
+    return;
+  }
+
+  function setFieldError(name, message) {
+    var input = document.getElementById(name);
+    var box   = document.getElementById('err_' + name);
+    if (message) {
+      input.setAttribute('aria-invalid', 'true');
+      box.textContent = message;
+      box.classList.add('show');
+    } else {
+      input.removeAttribute('aria-invalid');
+      box.textContent = '';
+      box.classList.remove('show');
+    }
+  }
+
+  function clearErrors() {
+    FIELDS.forEach(function (f) { setFieldError(f, ''); });
+    formError.classList.remove('show');
+    formError.textContent = '';
+  }
+
+  FIELDS.forEach(function (f) {
+    document.getElementById(f).addEventListener('input', function () {
+      setFieldError(f, '');
+    });
+  });
+
+  // Controle in de browser. De database controleert het nog een keer,
+  // dus dit is puur om de gast meteen te helpen.
+  function validate(values) {
+    var ok = true;
+
+    if (values.first_name.length < 2) {
+      setFieldError('first_name', 'Vul je voornaam in.'); ok = false;
+    }
+    if (values.last_name.length < 2) {
+      setFieldError('last_name', 'Vul je achternaam in.'); ok = false;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$/.test(values.email)) {
+      setFieldError('email', 'Dit lijkt geen geldig e-mailadres.'); ok = false;
+    }
+
+    var digits = values.phone.replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 15) {
+      setFieldError('phone', 'Vul een geldig telefoonnummer in.'); ok = false;
+    }
+
+    return ok;
+  }
+
+  var MESSAGES = {
+    EMAIL_TAKEN:        { field: 'email', text: 'Met dit e-mailadres is al een ticket gemaakt.' },
+    PHONE_TAKEN:        { field: 'phone', text: 'Met dit telefoonnummer is al een ticket gemaakt.' },
+    INVALID_EMAIL:      { field: 'email', text: 'Dit lijkt geen geldig e-mailadres.' },
+    INVALID_PHONE:      { field: 'phone', text: 'Vul een geldig telefoonnummer in.' },
+    INVALID_FIRST_NAME: { field: 'first_name', text: 'Vul je voornaam in.' },
+    INVALID_LAST_NAME:  { field: 'last_name', text: 'Vul je achternaam in.' }
+  };
+
+  function busy(state) {
+    btn.disabled = state;
+    btnLabel.textContent = state ? 'Bezig met aanmelden…' : 'Maak mijn ticket';
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    clearErrors();
+
+    var values = {
+      first_name: document.getElementById('first_name').value.trim(),
+      last_name:  document.getElementById('last_name').value.trim(),
+      email:      document.getElementById('email').value.trim().toLowerCase(),
+      phone:      document.getElementById('phone').value.trim()
+    };
+
+    if (!validate(values)) return;
+
+    busy(true);
+
+    window.db.rpc('register_guest', {
+      p_first_name: values.first_name,
+      p_last_name:  values.last_name,
+      p_email:      values.email,
+      p_phone:      values.phone
+    }).then(function (res) {
+      if (res.error) throw res.error;
+
+      var token = res.data;
+      try { localStorage.setItem('jungle_token', token); } catch (e) { /* privémodus */ }
+      location.href = 'ticket.html?t=' + encodeURIComponent(token);
+    }).catch(function (error) {
+      busy(false);
+
+      var raw = (error && (error.message || error.hint || '')) + '';
+      var key = Object.keys(MESSAGES).find(function (k) { return raw.indexOf(k) !== -1; });
+
+      if (key) {
+        setFieldError(MESSAGES[key].field, MESSAGES[key].text);
+        if (key === 'EMAIL_TAKEN' || key === 'PHONE_TAKEN') {
+          formError.textContent = 'Je staat al op de gastenlijst. Ben je je ticketlink kwijt? Vraag de organisator om hem opnieuw te sturen.';
+          formError.classList.add('show');
+        }
+        return;
+      }
+
+      formError.textContent = 'Aanmelden is niet gelukt. Controleer je internetverbinding en probeer het opnieuw.';
+      formError.classList.add('show');
+      console.error(error);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

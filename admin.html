@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jungle Party — Organisator</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050f0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%91%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- ==================== INLOGGEN ==================== -->
+<div class="wrap" id="loginView" style="display:none">
+
+  <header class="brand">
+    <span class="brand__kicker">Alleen voor de organisator</span>
+    <h1 class="brand__title">Jungle<br>Party</h1>
+  </header>
+
+  <div class="card">
+    <h2 class="card__title">Inloggen</h2>
+    <p class="card__hint">Log in om te scannen en de gastenlijst te bekijken.</p>
+
+    <div class="alert alert--error" id="loginError"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="loginEmail">E-mailadres</label>
+        <input type="email" id="loginEmail" autocomplete="username" inputmode="email" required>
+      </div>
+      <div class="field">
+        <label for="loginPass">Wachtwoord</label>
+        <input type="password" id="loginPass" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn" id="loginBtn">Inloggen</button>
+    </form>
+  </div>
+
+</div>
+
+<!-- ==================== DASHBOARD ==================== -->
+<div class="wrap wrap--wide" id="appView" style="display:none">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:22px;">
+    <div>
+      <h1 style="font-family:Anton,sans-serif; text-transform:uppercase; font-size:26px; margin:0; letter-spacing:.04em;">
+        Jungle Party
+      </h1>
+      <p style="margin:2px 0 0; font-size:13px; color:var(--muted);" id="whoami"></p>
+    </div>
+    <button class="btn btn--ghost btn--sm" id="logoutBtn" type="button">Uitloggen</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat__num" id="statTotal">0</div>
+      <div class="stat__label">Aangemeld</div>
+    </div>
+    <div class="stat stat--in">
+      <div class="stat__num" id="statIn">0</div>
+      <div class="stat__label">Binnen</div>
+    </div>
+    <div class="stat stat--out">
+      <div class="stat__num" id="statOut">0</div>
+      <div class="stat__label">Nog niet</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab is-active" data-tab="scan"   type="button">Scannen</button>
+    <button class="tab"           data-tab="guests" type="button">Gastenlijst</button>
+  </div>
+
+  <!-- ---------- Tab: scannen ---------- -->
+  <section id="tab-scan">
+    <div class="card">
+      <h2 class="card__title">QR-code scannen</h2>
+      <p class="card__hint">Richt de camera op de QR-code van de gast. Een ticket werkt maar één keer.</p>
+
+      <div class="alert alert--error" id="scanError"></div>
+
+      <div id="reader"></div>
+
+      <div style="margin-top:14px">
+        <button class="btn" id="startScanBtn" type="button">Camera starten</button>
+        <button class="btn btn--ghost" id="stopScanBtn" type="button" style="display:none; margin-top:10px">Camera stoppen</button>
+      </div>
+
+      <div class="scan-result" id="scanResult">
+        <div class="scan-result__icon" id="scanIcon"></div>
+        <h3 class="scan-result__title" id="scanTitle"></h3>
+        <p class="scan-result__sub" id="scanSub"></p>
+      </div>
+
+      <div class="perf"></div>
+
+      <p class="card__hint" style="margin:0 0 10px">Camera kapot of geen toestemming? Voer de code handmatig in:</p>
+      <form id="manualForm" class="linkbox">
+        <input type="text" id="manualToken" placeholder="Plak hier de ticketlink of -code"
+               style="flex:1; min-width:0; padding:12px 14px; font:inherit; font-size:16px; color:var(--text); background:rgba(0,0,0,.35); border:1px solid var(--line); border-radius:12px;">
+        <button class="btn btn--sm" type="submit">Check</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- Tab: gastenlijst ---------- -->
+  <section id="tab-guests" style="display:none">
+
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Zoek op naam, e-mail of telefoon…">
+      <button class="btn btn--ghost btn--sm nowrap" id="refreshBtn" type="button">Ververs</button>
+      <button class="btn btn--ghost btn--sm nowrap" id="csvBtn"     type="button">CSV</button>
+    </div>
+
+    <div class="alert alert--error" id="listError"></div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>E-mail</th>
+            <th>Telefoon</th>
+            <th>Aangemeld</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="guestRows"></tbody>
+      </table>
+      <div class="empty" id="emptyState" style="display:none">Nog geen aanmeldingen.</div>
+    </div>
+
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="assets/config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var db = window.db;
+
+  var loginView  = document.getElementById('loginView');
+  var appView    = document.getElementById('appView');
+  var loginError = document.getElementById('loginError');
+  var listError  = document.getElementById('listError');
+  var scanError  = document.getElementById('scanError');
+
+  var guests    = [];
+  var scanner   = null;
+  var pollTimer = null;
+  var lastScan  = { text: '', at: 0 };
+
+  // ------------------------------------------------------------
+  //  Hulpjes
+  // ------------------------------------------------------------
+
+  function show(el, message) {
+    el.textContent = message;
+    el.classList.add('show');
+  }
+
+  function hide(el) { el.classList.remove('show'); }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function dateShort(value) {
+    return new Date(value).toLocaleString('nl-NL', {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  // Korte piep bij een scan, zodat je niet naar het scherm hoeft te kijken.
+  function beep(frequency, duration) {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx  = new Ctx();
+      var osc  = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = frequency;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+      setTimeout(function () { ctx.close(); }, (duration + 0.1) * 1000);
+    } catch (e) { /* geluid is bijzaak */ }
+  }
+
+  // ------------------------------------------------------------
+  //  Inloggen en sessie
+  // ------------------------------------------------------------
+
+  document.getElementById('loginForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    hide(loginError);
+
+    var btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Bezig…';
+
+    db.auth.signInWithPassword({
+      email:    document.getElementById('loginEmail').value.trim(),
+      password: document.getElementById('loginPass').value
+    }).then(function (res) {
+      if (res.error) throw res.error;
+      return boot();
+    }).catch(function (error) {
+      var raw = (error && error.message) || '';
+      show(loginError, /Invalid login/i.test(raw)
+        ? 'E-mailadres of wachtwoord klopt niet.'
+        : 'Inloggen is niet gelukt. Probeer het opnieuw.');
+      console.error(error);
+    }).finally(function () {
+      btn.disabled = false;
+      btn.textContent = 'Inloggen';
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    stopScanner();
+    clearInterval(pollTimer);
+    db.auth.signOut().then(function () { location.reload(); });
+  });
+
+  function showLogin() {
+    clearInterval(pollTimer);
+    appView.style.display   = 'none';
+    loginView.style.display = '';
+  }
+
+  function boot() {
+    return db.auth.getUser().then(function (res) {
+      var user = res.data && res.data.user;
+      if (!user) { showLogin(); return; }
+
+      // Een account hebben is niet genoeg: het e-mailadres moet ook
+      // op de organisator-lijst in de database staan.
+      return db.rpc('is_owner').then(function (owner) {
+        if (owner.error) throw owner.error;
+
+        if (!owner.data) {
+          return db.auth.signOut().then(function () {
+            showLogin();
+            show(loginError, 'Dit account heeft geen toegang tot de gastenlijst.');
+          });
+        }
+
+        document.getElementById('whoami').textContent = user.email;
+        loginView.style.display = 'none';
+        appView.style.display   = '';
+
+        loadGuests();
+        clearInterval(pollTimer);
+        pollTimer = setInterval(loadGuests, 10000);
+      });
+    });
+  }
+
+  // ------------------------------------------------------------
+  //  Tabs
+  // ------------------------------------------------------------
+
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
+    tab.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+        t.classList.toggle('is-active', t === tab);
+      });
+      var name = tab.dataset.tab;
+      document.getElementById('tab-scan').style.display   = name === 'scan'   ? '' : 'none';
+      document.getElementById('tab-guests').style.display = name === 'guests' ? '' : 'none';
+      if (name === 'guests') loadGuests();
+    });
+  });
+
+  // ------------------------------------------------------------
+  //  Gastenlijst
+  // ------------------------------------------------------------
+
+  function loadGuests() {
+    return db.from('guests')
+      .select('id, first_name, last_name, email, phone, created_at, scanned_at, scanned_by')
+      .order('created_at', { ascending: false })
+      .then(function (res) {
+        if (res.error) throw res.error;
+        hide(listError);
+        guests = res.data || [];
+        renderStats();
+        renderRows();
+      })
+      .catch(function (error) {
+        show(listError, 'De gastenlijst kon niet worden geladen.');
+        console.error(error);
+      });
+  }
+
+  function renderStats() {
+    var inside = guests.filter(function (g) { return g.scanned_at; }).length;
+    document.getElementById('statTotal').textContent = guests.length;
+    document.getElementById('statIn').textContent    = inside;
+    document.getElementById('statOut').textContent   = guests.length - inside;
+  }
+
+  function filtered() {
+    var q = document.getElementById('search').value.trim().toLowerCase();
+    if (!q) return guests;
+    return guests.filter(function (g) {
+      return (g.first_name + ' ' + g.last_name + ' ' + g.email + ' ' + g.phone)
+        .toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function renderRows() {
+    var rows = filtered();
+    var body = document.getElementById('guestRows');
+
+    document.getElementById('emptyState').style.display = rows.length ? 'none' : '';
+
+    body.innerHTML = rows.map(function (g) {
+      var status = g.scanned_at
+        ? '<span class="pill pill--in">Binnen ' + escapeHtml(dateShort(g.scanned_at)) + '</span>'
+        : '<span class="pill pill--out">Nog niet</span>';
+
+      var action = g.scanned_at
+        ? '<button class="btn btn--ghost btn--sm" data-unscan="' + escapeHtml(g.id) + '" type="button">Ongedaan</button>'
+        : '';
+
+      return '<tr>' +
+        '<td class="nowrap"><strong>' + escapeHtml(g.first_name + ' ' + g.last_name) + '</strong></td>' +
+        '<td>' + escapeHtml(g.email) + '</td>' +
+        '<td class="nowrap">' + escapeHtml(g.phone) + '</td>' +
+        '<td class="nowrap">' + escapeHtml(dateShort(g.created_at)) + '</td>' +
+        '<td>' + status + '</td>' +
+        '<td class="nowrap">' + action + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  document.getElementById('search').addEventListener('input', renderRows);
+  document.getElementById('refreshBtn').addEventListener('click', loadGuests);
+
+  document.getElementById('guestRows').addEventListener('click', function (event) {
+    var btn = event.target.closest('[data-unscan]');
+    if (!btn) return;
+    if (!confirm('Deze scan ongedaan maken? Het ticket wordt weer geldig.')) return;
+
+    btn.disabled = true;
+    db.rpc('unscan_ticket', { p_id: btn.dataset.unscan }).then(function (res) {
+      if (res.error) throw res.error;
+      return loadGuests();
+    }).catch(function (error) {
+      show(listError, 'Ongedaan maken is niet gelukt.');
+      console.error(error);
+      btn.disabled = false;
+    });
+  });
+
+  document.getElementById('csvBtn').addEventListener('click', function () {
+    var head = ['Voornaam', 'Achternaam', 'E-mail', 'Telefoon', 'Aangemeld op', 'Gescand op', 'Gescand door'];
+
+    var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+
+    var lines = [head.map(cell).join(';')].concat(guests.map(function (g) {
+      return [
+        g.first_name, g.last_name, g.email, g.phone,
+        new Date(g.created_at).toLocaleString('nl-NL'),
+        g.scanned_at ? new Date(g.scanned_at).toLocaleString('nl-NL') : '',
+        g.scanned_by || ''
+      ].map(cell).join(';');
+    }));
+
+    // BOM erbij zodat Excel de accenten goed toont
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'jungle-party-gasten.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  // ------------------------------------------------------------
+  //  Scannen
+  // ------------------------------------------------------------
+
+  // De QR bevat de volledige ticketlink; hier halen we het token eruit.
+  // Losse codes plakken werkt ook.
+  function extractToken(text) {
+    var value = (text || '').trim();
+    try {
+      var param = new URL(value).searchParams.get('t');
+      if (param) return param.trim();
+    } catch (e) { /* geen URL, dan hieronder verder */ }
+
+    var match = value.match(/[?&]t=([^&\s]+)/);
+    if (match) return decodeURIComponent(match[1]);
+
+    return /^[a-f0-9]{32}$/i.test(value) ? value.toLowerCase() : value;
+  }
+
+  function showResult(kind, icon, title, sub) {
+    var box = document.getElementById('scanResult');
+    box.className = 'scan-result show scan-result--' + kind;
+    document.getElementById('scanIcon').textContent  = icon;
+    document.getElementById('scanTitle').textContent = title;
+    document.getElementById('scanSub').textContent   = sub || '';
+  }
+
+  function handleCode(text) {
+    var token = extractToken(text);
+    if (!token) return Promise.resolve();
+
+    return db.rpc('scan_ticket', { p_token: token }).then(function (res) {
+      if (res.error) throw res.error;
+      var r = res.data;
+
+      if (r.status === 'ok') {
+        beep(880, 0.16);
+        showResult('ok', '✓', 'Welkom!', r.first_name + ' ' + r.last_name);
+      } else if (r.status === 'already') {
+        beep(300, 0.4);
+        showResult('already', '!', 'Al gescand',
+          r.first_name + ' ' + r.last_name + ' — binnengekomen om ' + dateShort(r.scanned_at));
+      } else {
+        beep(180, 0.45);
+        showResult('invalid', '✕', 'Ongeldig', 'Deze code staat niet op de gastenlijst.');
+      }
+
+      loadGuests();
+    }).catch(function (error) {
+      beep(180, 0.45);
+      showResult('invalid', '✕', 'Fout', 'Controleren is niet gelukt. Probeer opnieuw.');
+      console.error(error);
+    });
+  }
+
+  function onDecoded(text) {
+    var now = Date.now();
+    // Dezelfde code binnen 3 seconden negeren: de camera leest hem
+    // meerdere keren per seconde.
+    if (text === lastScan.text && now - lastScan.at < 3000) return;
+    lastScan = { text: text, at: now };
+    handleCode(text);
+  }
+
+  function startScanner() {
+    hide(scanError);
+
+    if (!window.Html5Qrcode) {
+      show(scanError, 'De scanner kon niet worden geladen. Controleer je internetverbinding.');
+      return;
+    }
+
+    scanner = new Html5Qrcode('reader', { verbose: false });
+
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      onDecoded,
+      function () { /* geen code in beeld, dat is normaal */ }
+    ).then(function () {
+      document.getElementById('startScanBtn').style.display = 'none';
+      document.getElementById('stopScanBtn').style.display  = '';
+    }).catch(function (error) {
+      scanner = null;
+      show(scanError, 'De camera kon niet worden gestart. Geef deze pagina toegang tot je camera. ' +
+                      'Let op: dat lukt alleen op een https-adres.');
+      console.error(error);
+    });
+  }
+
+  function stopScanner() {
+    if (!scanner) return;
+    scanner.stop().then(function () { scanner.clear(); }).catch(function () {}).finally(function () {
+      scanner = null;
+      document.getElementById('startScanBtn').style.display = '';
+      document.getElementById('stopScanBtn').style.display  = 'none';
+    });
+  }
+
+  document.getElementById('startScanBtn').addEventListener('click', startScanner);
+  document.getElementById('stopScanBtn').addEventListener('click', stopScanner);
+
+  document.getElementById('manualForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var input = document.getElementById('manualToken');
+    if (!input.value.trim()) return;
+    handleCode(input.value);
+    input.value = '';
+  });
+
+  // ------------------------------------------------------------
+  //  Start
+  // ------------------------------------------------------------
+
+  boot().catch(function (error) {
+    console.error(error);
+    showLogin();
+  });
+})();
+</script>
+
+</body>
+</html>

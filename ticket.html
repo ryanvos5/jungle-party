@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jungle Party — Mijn ticket</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050f0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%9F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="brand">
+    <span class="brand__kicker">Jouw ticket</span>
+    <h1 class="brand__title">Jungle<br>Party</h1>
+  </header>
+
+  <div class="alert alert--error" id="pageError"></div>
+
+  <div class="card ticket" id="ticketCard" style="display:none">
+
+    <h2 class="ticket__name" id="guestName"></h2>
+    <p class="ticket__meta" id="guestMeta"></p>
+
+    <div class="qr-frame" id="qrFrame">
+      <canvas id="qr"></canvas>
+    </div>
+
+    <div>
+      <span class="status status--valid" id="statusBadge">
+        <span class="dot"></span><span id="statusText">Geldig</span>
+      </span>
+    </div>
+
+    <div class="perf"></div>
+
+    <div class="savebox">
+      <p><strong>Bewaar deze link.</strong> Laat de QR-code bij binnenkomst scannen. Hij werkt één keer.</p>
+      <div class="linkbox">
+        <input type="text" id="ticketLink" readonly onclick="this.select()">
+        <button class="btn btn--sm" id="copyBtn" type="button">Kopieer</button>
+      </div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:10px;">
+      <button class="btn btn--ghost btn--sm" id="downloadBtn" type="button" style="flex:1">QR opslaan</button>
+      <button class="btn btn--ghost btn--sm" id="refreshBtn"  type="button" style="flex:1">Status verversen</button>
+    </div>
+
+  </div>
+
+  <p class="footer">Tot op het feest! 🌴</p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="assets/config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var token = new URLSearchParams(location.search).get('t');
+
+  var pageError  = document.getElementById('pageError');
+  var card       = document.getElementById('ticketCard');
+  var nameEl     = document.getElementById('guestName');
+  var metaEl     = document.getElementById('guestMeta');
+  var qrFrame    = document.getElementById('qrFrame');
+  var badge      = document.getElementById('statusBadge');
+  var statusText = document.getElementById('statusText');
+  var linkInput  = document.getElementById('ticketLink');
+
+  function fail(message) {
+    pageError.textContent = message;
+    pageError.classList.add('show');
+    card.style.display = 'none';
+  }
+
+  if (!token) {
+    fail('Deze link is niet compleet. Gebruik de volledige ticketlink die je bij het aanmelden hebt gekregen.');
+    return;
+  }
+
+  var url = window.ticketUrl(token);
+  linkInput.value = url;
+
+  // De QR bevat de ticketlink zelf. Zo opent een gewone telefooncamera
+  // het ticket, en de scanner van de organisator haalt het token eruit.
+  QRCode.toCanvas(document.getElementById('qr'), url, {
+    width: 464,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#0a1a10', light: '#ffffff' }
+  }, function (err) {
+    if (err) console.error(err);
+  });
+
+  function render(row) {
+    nameEl.textContent = row.first_name + ' ' + row.last_name;
+
+    var made = new Date(row.created_at);
+    metaEl.textContent = 'Aangemeld op ' + made.toLocaleDateString('nl-NL', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    if (row.scanned_at) {
+      var when = new Date(row.scanned_at);
+      qrFrame.classList.add('qr-frame--void');
+      badge.className = 'status status--used';
+      statusText.textContent = 'Al gescand — ' + when.toLocaleString('nl-NL', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+      });
+    } else {
+      qrFrame.classList.remove('qr-frame--void');
+      badge.className = 'status status--valid';
+      statusText.textContent = 'Geldig';
+    }
+
+    card.style.display = '';
+  }
+
+  function load() {
+    return window.db.rpc('get_ticket', { p_token: token }).then(function (res) {
+      if (res.error) throw res.error;
+      if (!res.data || !res.data.length) {
+        fail('Dit ticket bestaat niet (meer). Controleer of je de hele link hebt gekopieerd.');
+        return;
+      }
+      pageError.classList.remove('show');
+      render(res.data[0]);
+    }).catch(function (error) {
+      console.error(error);
+      fail('Het ticket kon niet worden geladen. Controleer je internetverbinding en probeer het opnieuw.');
+    });
+  }
+
+  load();
+
+  // Onthouden op dit apparaat, zodat het aanmeldformulier je
+  // voortaan meteen naar je eigen ticket stuurt.
+  try { localStorage.setItem('jungle_token', token); } catch (e) { /* privémodus */ }
+
+  document.getElementById('refreshBtn').addEventListener('click', load);
+
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var btn = this;
+    var done = function () {
+      btn.textContent = 'Gekopieerd';
+      setTimeout(function () { btn.textContent = 'Kopieer'; }, 1800);
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(done).catch(function () {
+        linkInput.select(); document.execCommand('copy'); done();
+      });
+    } else {
+      linkInput.select(); document.execCommand('copy'); done();
+    }
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', function () {
+    var canvas = document.getElementById('qr');
+    var name   = (nameEl.textContent || 'ticket').trim().replace(/\s+/g, '-').toLowerCase();
+    var link   = document.createElement('a');
+    link.download = 'jungle-party-' + name + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+})();
+</script>
+
+</body>
+</html>
