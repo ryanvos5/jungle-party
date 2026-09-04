@@ -6,3 +6,7 @@ Thumbs.db
 node_modules/
 .env
 .env.*
+
+# Losse notities en wachtwoorden horen niet in een publieke repo
+*.txt
+
