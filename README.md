@@ -46,8 +46,19 @@ GitHub Pages. De aanmeldingen staan in een Supabase-database (ook gratis).
   - Oranje = deze code is al eerder gescand
   - Rood = staat niet op de gastenlijst
 - Werkt de camera niet, plak dan de ticketlink in het handmatige veld eronder.
-- Tab **Gastenlijst** toont wie zich aanmeldde en wie binnen is, met zoekveld
-  en een CSV-export. Per ongeluk gescand? Klik op *Ongedaan*.
+- Tab **Gastenlijst** toont wie zich aanmeldde, door wie diegene is uitgenodigd
+  en wie binnen is, met zoekveld en een CSV-export.
+
+Per gast staan er drie knoppen:
+
+| Knop | Wat het doet |
+|---|---|
+| **Ongedaan** | Draait een scan terug, het ticket wordt weer geldig |
+| **Blokkeer** | De QR geeft bij de deur een rood *Geblokkeerd*-scherm met dubbele pieptoon. De gast ziet hier zelf niets van; omkeerbaar met *Vrijgeven* |
+| **Verwijder** | Haalt de aanmelding definitief uit de lijst. Niet terug te draaien — wil je alleen de toegang ontzeggen, gebruik dan Blokkeer |
+
+Gasten vullen bij het aanmelden in door wie ze zijn uitgenodigd. Zie je een naam
+die je niet vertrouwt, zoek er dan op en blokkeer die hele groep in één keer.
 
 > De camera werkt alleen op een `https`-adres. Op GitHub Pages is dat automatisch
 > zo; test je lokaal, gebruik dan het handmatige invoerveld.

@@ -15,6 +15,8 @@
   --gold:      #ffc247;
   --coral:     #ff6b5e;
 
+  --block:     #ff2d6f;
+
   --text:      #e9f6ec;
   --muted:     #8dab97;
 
@@ -130,6 +132,41 @@ body::before {
   color: var(--muted);
   font-size: 14px;
   margin: 0 0 20px;
+}
+
+/* ------------------------ Waarschuwing ------------------------ */
+
+.notice {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  background: linear-gradient(140deg, rgba(255, 194, 71, .14), rgba(255, 107, 94, .12));
+  border: 1px solid rgba(255, 194, 71, .45);
+  border-radius: 14px;
+}
+
+.notice__icon {
+  flex: none;
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.notice__title {
+  margin: 0 0 4px;
+  font-family: 'Anton', sans-serif;
+  font-size: 16px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.notice__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #f4e7cd;
 }
 
 /* -------------------------- Formulier ------------------------- */
@@ -385,7 +422,7 @@ body::before {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -412,8 +449,9 @@ body::before {
   color: var(--muted);
 }
 
-.stat--in  .stat__num { color: var(--lime); }
-.stat--out .stat__num { color: var(--gold); }
+.stat--in      .stat__num { color: var(--lime); }
+.stat--out     .stat__num { color: var(--gold); }
+.stat--blocked .stat__num { color: var(--block); }
 
 #reader {
   overflow: hidden;
@@ -449,6 +487,14 @@ body::before {
 .scan-result--ok      { color: var(--lime);  border-color: var(--lime);  background: rgba(182, 255, 61, .1); }
 .scan-result--already { color: var(--gold);  border-color: var(--gold);  background: rgba(255, 194, 71, .1); }
 .scan-result--invalid { color: var(--coral); border-color: var(--coral); background: rgba(255, 107, 94, .1); }
+
+.scan-result--blocked {
+  color: #fff;
+  border-color: var(--block);
+  background: linear-gradient(150deg, rgba(255, 45, 111, .35), rgba(255, 45, 111, .18));
+}
+
+.scan-result--blocked .scan-result__title { color: #fff; }
 
 .toolbar {
   display: flex;
@@ -511,8 +557,16 @@ tr:last-child td { border-bottom: none; }
   white-space: nowrap;
 }
 
-.pill--in  { color: var(--lime);  background: rgba(182, 255, 61, .13); }
-.pill--out { color: var(--gold);  background: rgba(255, 194, 71, .13); }
+.pill--in      { color: var(--lime);  background: rgba(182, 255, 61, .13); }
+.pill--out     { color: var(--gold);  background: rgba(255, 194, 71, .13); }
+.pill--blocked { color: #fff; background: var(--block); }
+
+/* Geblokkeerde gasten vallen op in de lijst */
+tr.is-blocked td { background: rgba(255, 45, 111, .07); }
+tr.is-blocked td:first-child { box-shadow: inset 3px 0 0 var(--block); }
+
+.btn--block   { color: #fff; background: linear-gradient(150deg, #ff2d6f, #c31450); }
+.btn--unblock { color: var(--text); background: transparent; border: 1px solid var(--block); }
 
 .empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 14px; }
 

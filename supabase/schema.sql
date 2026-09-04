@@ -28,10 +28,13 @@ create table if not exists public.guests (
   email       text        not null,
   phone       text        not null,
   phone_norm  text        not null,
+  invited_by  text        not null,
   token       text        not null unique,
   created_at  timestamptz not null default now(),
   scanned_at  timestamptz,
-  scanned_by  text
+  scanned_by  text,
+  blocked_at  timestamptz,
+  blocked_by  text
 );
 
 create unique index if not exists guests_email_uniq  on public.guests (lower(email));
@@ -110,7 +113,8 @@ create or replace function public.register_guest(
   p_first_name text,
   p_last_name  text,
   p_email      text,
-  p_phone      text
+  p_phone      text,
+  p_invited_by text
 )
 returns text
 language plpgsql
@@ -118,12 +122,13 @@ security definer
 set search_path = public
 as $fn$
 declare
-  v_first text := btrim(coalesce(p_first_name, ''));
-  v_last  text := btrim(coalesce(p_last_name,  ''));
-  v_email text := lower(btrim(coalesce(p_email, '')));
-  v_phone text := btrim(coalesce(p_phone, ''));
-  v_norm  text := public.normalize_phone(p_phone);
-  v_token text;
+  v_first   text := btrim(coalesce(p_first_name, ''));
+  v_last    text := btrim(coalesce(p_last_name,  ''));
+  v_email   text := lower(btrim(coalesce(p_email, '')));
+  v_phone   text := btrim(coalesce(p_phone, ''));
+  v_invited text := btrim(coalesce(p_invited_by, ''));
+  v_norm    text := public.normalize_phone(p_phone);
+  v_token   text;
 begin
   if length(v_first) < 2 or length(v_first) > 60 then
     raise exception 'INVALID_FIRST_NAME';
@@ -141,6 +146,10 @@ begin
     raise exception 'INVALID_PHONE';
   end if;
 
+  if length(v_invited) < 2 or length(v_invited) > 80 then
+    raise exception 'INVALID_INVITED_BY';
+  end if;
+
   if exists (select 1 from public.guests g where lower(g.email) = v_email) then
     raise exception 'EMAIL_TAKEN';
   end if;
@@ -152,8 +161,8 @@ begin
   -- 32 hex tekens = 128 bits willekeur, niet te raden
   v_token := replace(gen_random_uuid()::text, '-', '');
 
-  insert into public.guests (first_name, last_name, email, phone, phone_norm, token)
-  values (v_first, v_last, v_email, v_phone, v_norm, v_token);
+  insert into public.guests (first_name, last_name, email, phone, phone_norm, token, invited_by)
+  values (v_first, v_last, v_email, v_phone, v_norm, v_token, v_invited);
 
   return v_token;
 end;
@@ -205,6 +214,17 @@ begin
     return jsonb_build_object('status', 'invalid');
   end if;
 
+  -- Geblokkeerd gaat voor op al het andere: zo'n ticket wordt ook
+  -- niet als 'gescand' weggeschreven.
+  if g.blocked_at is not null then
+    return jsonb_build_object(
+      'status',     'blocked',
+      'first_name', g.first_name,
+      'last_name',  g.last_name,
+      'invited_by', g.invited_by
+    );
+  end if;
+
   if g.scanned_at is not null then
     return jsonb_build_object(
       'status',     'already',
@@ -223,8 +243,31 @@ begin
   return jsonb_build_object(
     'status',     'ok',
     'first_name', g.first_name,
-    'last_name',  g.last_name
+    'last_name',  g.last_name,
+    'invited_by', g.invited_by
   );
+end;
+$fn$;
+
+-- -------------------------------------------------------------
+--  RPC: set_blocked
+--  Alleen de organisator. Blokkeert een gast of geeft hem weer vrij.
+-- -------------------------------------------------------------
+create or replace function public.set_blocked(p_id uuid, p_blocked boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+begin
+  if not public.is_owner() then
+    raise exception 'NOT_AUTHORIZED';
+  end if;
+
+  update public.guests
+     set blocked_at = case when p_blocked then now() else null end,
+         blocked_by = case when p_blocked then coalesce(auth.jwt() ->> 'email', 'organisator') else null end
+   where id = p_id;
 end;
 $fn$;
 
@@ -253,17 +296,19 @@ $fn$;
 -- -------------------------------------------------------------
 --  Rechten: dicht by default, daarna gericht uitdelen
 -- -------------------------------------------------------------
-revoke all on function public.register_guest(text, text, text, text) from public;
+revoke all on function public.register_guest(text, text, text, text, text) from public;
 revoke all on function public.get_ticket(text)                       from public;
 revoke all on function public.scan_ticket(text)                      from public;
 revoke all on function public.unscan_ticket(uuid)                    from public;
 revoke all on function public.is_owner()                             from public;
+revoke all on function public.set_blocked(uuid, boolean)              from public;
 
-grant execute on function public.register_guest(text, text, text, text) to anon, authenticated;
+grant execute on function public.register_guest(text, text, text, text, text) to anon, authenticated;
 grant execute on function public.get_ticket(text)                       to anon, authenticated;
 grant execute on function public.scan_ticket(text)                      to authenticated;
 grant execute on function public.unscan_ticket(uuid)                    to authenticated;
 grant execute on function public.is_owner()                             to authenticated;
+grant execute on function public.set_blocked(uuid, boolean)              to authenticated;
 
 -- De API opnieuw laten inlezen, zodat de nieuwe functies meteen bereikbaar zijn
 notify pgrst, 'reload schema';

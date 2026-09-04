@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="stylesheet" href="assets/style.css?v=3">
 </head>
 <body>
 
@@ -25,6 +25,17 @@
   <div class="card">
     <h2 class="card__title">Aanmelden</h2>
     <p class="card__hint">Alle velden zijn verplicht. Je ticket is persoonlijk en werkt één keer.</p>
+
+    <div class="notice">
+      <span class="notice__icon" aria-hidden="true">⚠️</span>
+      <div>
+        <p class="notice__title">Let op!</p>
+        <p class="notice__text">
+          Ben je niet uitgenodigd, dan werkt je QR-code bij de ingang niet.
+          De organisator controleert de gastenlijst en kan tickets blokkeren.
+        </p>
+      </div>
+    </div>
 
     <div class="alert alert--error" id="formError"></div>
 
@@ -59,6 +70,13 @@
         <div class="field__error" id="err_phone"></div>
       </div>
 
+      <div class="field">
+        <label for="invited_by">Door wie ben je uitgenodigd?</label>
+        <input type="text" id="invited_by" name="invited_by"
+               placeholder="Naam van degene die je uitnodigde" maxlength="80" required>
+        <div class="field__error" id="err_invited_by"></div>
+      </div>
+
       <button type="submit" class="btn" id="submitBtn">
         <span id="submitLabel">Maak mijn ticket</span>
       </button>
@@ -69,8 +87,8 @@
 
 </div>
 
-<script src="assets/vendor/supabase.js?v=2"></script>
-<script src="assets/config.js?v=2"></script>
+<script src="assets/vendor/supabase.js?v=3"></script>
+<script src="assets/config.js?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -83,7 +101,7 @@
   var btnLabel   = document.getElementById('submitLabel');
   var formError  = document.getElementById('formError');
 
-  var FIELDS = ['first_name', 'last_name', 'email', 'phone'];
+  var FIELDS = ['first_name', 'last_name', 'email', 'phone', 'invited_by'];
 
   // Wie zich al eerder aanmeldde op dit apparaat, sturen we direct
   // door naar het eigen ticket in plaats van een dubbele aanmelding.
@@ -139,6 +157,10 @@
       setFieldError('phone', 'Vul een geldig telefoonnummer in.'); ok = false;
     }
 
+    if (values.invited_by.length < 2) {
+      setFieldError('invited_by', 'Vul in door wie je bent uitgenodigd.'); ok = false;
+    }
+
     return ok;
   }
 
@@ -148,7 +170,8 @@
     INVALID_EMAIL:      { field: 'email', text: 'Dit lijkt geen geldig e-mailadres.' },
     INVALID_PHONE:      { field: 'phone', text: 'Vul een geldig telefoonnummer in.' },
     INVALID_FIRST_NAME: { field: 'first_name', text: 'Vul je voornaam in.' },
-    INVALID_LAST_NAME:  { field: 'last_name', text: 'Vul je achternaam in.' }
+    INVALID_LAST_NAME:  { field: 'last_name', text: 'Vul je achternaam in.' },
+    INVALID_INVITED_BY: { field: 'invited_by', text: 'Vul in door wie je bent uitgenodigd.' }
   };
 
   function busy(state) {
@@ -164,7 +187,8 @@
       first_name: document.getElementById('first_name').value.trim(),
       last_name:  document.getElementById('last_name').value.trim(),
       email:      document.getElementById('email').value.trim().toLowerCase(),
-      phone:      document.getElementById('phone').value.trim()
+      phone:      document.getElementById('phone').value.trim(),
+      invited_by: document.getElementById('invited_by').value.trim()
     };
 
     if (!validate(values)) return;
@@ -175,7 +199,8 @@
       p_first_name: values.first_name,
       p_last_name:  values.last_name,
       p_email:      values.email,
-      p_phone:      values.phone
+      p_phone:      values.phone,
+      p_invited_by: values.invited_by
     }).then(function (res) {
       if (res.error) throw res.error;
 

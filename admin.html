@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="stylesheet" href="assets/style.css?v=3">
 </head>
 <body>
 
@@ -69,6 +69,10 @@
       <div class="stat__num" id="statOut">0</div>
       <div class="stat__label">Nog niet</div>
     </div>
+    <div class="stat stat--blocked">
+      <div class="stat__num" id="statBlocked">0</div>
+      <div class="stat__label">Geblokkeerd</div>
+    </div>
   </div>
 
   <div class="tabs">
@@ -112,7 +116,7 @@
   <section id="tab-guests" style="display:none">
 
     <div class="toolbar">
-      <input type="search" id="search" placeholder="Zoek op naam, e-mail of telefoon…">
+      <input type="search" id="search" placeholder="Zoek op naam, uitnodiger, e-mail of telefoon…">
       <button class="btn btn--ghost btn--sm nowrap" id="refreshBtn" type="button">Ververs</button>
       <button class="btn btn--ghost btn--sm nowrap" id="csvBtn"     type="button">CSV</button>
     </div>
@@ -124,6 +128,7 @@
         <thead>
           <tr>
             <th>Naam</th>
+            <th>Uitgenodigd door</th>
             <th>E-mail</th>
             <th>Telefoon</th>
             <th>Aangemeld</th>
@@ -140,9 +145,9 @@
 
 </div>
 
-<script src="assets/vendor/supabase.js?v=2"></script>
-<script src="assets/vendor/html5-qrcode.min.js?v=2"></script>
-<script src="assets/config.js?v=2"></script>
+<script src="assets/vendor/supabase.js?v=3"></script>
+<script src="assets/vendor/html5-qrcode.min.js?v=3"></script>
+<script src="assets/config.js?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -297,7 +302,7 @@
 
   function loadGuests() {
     return db.from('guests')
-      .select('id, first_name, last_name, email, phone, created_at, scanned_at, scanned_by')
+      .select('id, first_name, last_name, email, phone, invited_by, created_at, scanned_at, scanned_by, blocked_at, blocked_by')
       .order('created_at', { ascending: false })
       .then(function (res) {
         if (res.error) throw res.error;
@@ -313,17 +318,21 @@
   }
 
   function renderStats() {
-    var inside = guests.filter(function (g) { return g.scanned_at; }).length;
-    document.getElementById('statTotal').textContent = guests.length;
-    document.getElementById('statIn').textContent    = inside;
-    document.getElementById('statOut').textContent   = guests.length - inside;
+    var inside  = guests.filter(function (g) { return g.scanned_at && !g.blocked_at; }).length;
+    var blocked = guests.filter(function (g) { return g.blocked_at; }).length;
+
+    document.getElementById('statTotal').textContent   = guests.length;
+    document.getElementById('statIn').textContent      = inside;
+    document.getElementById('statOut').textContent     = guests.length - inside - blocked;
+    document.getElementById('statBlocked').textContent = blocked;
   }
 
   function filtered() {
     var q = document.getElementById('search').value.trim().toLowerCase();
     if (!q) return guests;
     return guests.filter(function (g) {
-      return (g.first_name + ' ' + g.last_name + ' ' + g.email + ' ' + g.phone)
+      return (g.first_name + ' ' + g.last_name + ' ' + g.email + ' ' +
+              g.phone + ' ' + (g.invited_by || ''))
         .toLowerCase().indexOf(q) !== -1;
     });
   }
@@ -335,21 +344,38 @@
     document.getElementById('emptyState').style.display = rows.length ? 'none' : '';
 
     body.innerHTML = rows.map(function (g) {
-      var status = g.scanned_at
-        ? '<span class="pill pill--in">Binnen ' + escapeHtml(dateShort(g.scanned_at)) + '</span>'
-        : '<span class="pill pill--out">Nog niet</span>';
+      var id = escapeHtml(g.id);
 
-      var action = g.scanned_at
-        ? '<button class="btn btn--ghost btn--sm" data-unscan="' + escapeHtml(g.id) + '" type="button">Ongedaan</button>'
-        : '';
+      // Geblokkeerd weegt zwaarder dan binnen of nog-niet
+      var status;
+      if (g.blocked_at) {
+        status = '<span class="pill pill--blocked">Geblokkeerd</span>';
+      } else if (g.scanned_at) {
+        status = '<span class="pill pill--in">Binnen ' + escapeHtml(dateShort(g.scanned_at)) + '</span>';
+      } else {
+        status = '<span class="pill pill--out">Nog niet</span>';
+      }
 
-      return '<tr>' +
+      var actions = [];
+
+      if (g.scanned_at && !g.blocked_at) {
+        actions.push('<button class="btn btn--ghost btn--sm" data-unscan="' + id + '" type="button">Ongedaan</button>');
+      }
+
+      actions.push(g.blocked_at
+        ? '<button class="btn btn--sm btn--unblock" data-unblock="' + id + '" type="button">Vrijgeven</button>'
+        : '<button class="btn btn--sm btn--block" data-block="' + id + '" type="button">Blokkeer</button>');
+
+      actions.push('<button class="btn btn--ghost btn--sm" data-delete="' + id + '" type="button">Verwijder</button>');
+
+      return '<tr' + (g.blocked_at ? ' class="is-blocked"' : '') + '>' +
         '<td class="nowrap"><strong>' + escapeHtml(g.first_name + ' ' + g.last_name) + '</strong></td>' +
+        '<td>' + escapeHtml(g.invited_by || '—') + '</td>' +
         '<td>' + escapeHtml(g.email) + '</td>' +
         '<td class="nowrap">' + escapeHtml(g.phone) + '</td>' +
         '<td class="nowrap">' + escapeHtml(dateShort(g.created_at)) + '</td>' +
         '<td>' + status + '</td>' +
-        '<td class="nowrap">' + action + '</td>' +
+        '<td class="nowrap"><div style="display:flex; gap:6px">' + actions.join('') + '</div></td>' +
       '</tr>';
     }).join('');
   }
@@ -357,33 +383,67 @@
   document.getElementById('search').addEventListener('input', renderRows);
   document.getElementById('refreshBtn').addEventListener('click', loadGuests);
 
+  function nameOf(id) {
+    var g = guests.find(function (x) { return x.id === id; });
+    return g ? g.first_name + ' ' + g.last_name : 'deze gast';
+  }
+
   document.getElementById('guestRows').addEventListener('click', function (event) {
-    var btn = event.target.closest('[data-unscan]');
+    var btn = event.target.closest('[data-unscan],[data-block],[data-unblock],[data-delete]');
     if (!btn) return;
-    if (!confirm('Deze scan ongedaan maken? Het ticket wordt weer geldig.')) return;
+
+    var d = btn.dataset;
+    var job, id;
+
+    if (d.unscan) {
+      id = d.unscan;
+      if (!confirm('Scan van ' + nameOf(id) + ' ongedaan maken? Het ticket wordt weer geldig.')) return;
+      job = db.rpc('unscan_ticket', { p_id: id });
+
+    } else if (d.block) {
+      id = d.block;
+      if (!confirm(nameOf(id) + ' blokkeren?\n\nDe QR-code werkt dan niet meer bij de ingang.')) return;
+      job = db.rpc('set_blocked', { p_id: id, p_blocked: true });
+
+    } else if (d.unblock) {
+      id = d.unblock;
+      if (!confirm(nameOf(id) + ' weer vrijgeven? De QR-code werkt daarna gewoon weer.')) return;
+      job = db.rpc('set_blocked', { p_id: id, p_blocked: false });
+
+    } else {
+      id = d.delete;
+      if (!confirm('Wil je ' + nameOf(id) + ' definitief uit de gastenlijst verwijderen?\n\n' +
+                   'Dit kan niet ongedaan worden gemaakt. Wil je de gast alleen de toegang ' +
+                   'ontzeggen, gebruik dan Blokkeer.')) return;
+      job = db.from('guests').delete().eq('id', id);
+    }
 
     btn.disabled = true;
-    db.rpc('unscan_ticket', { p_id: btn.dataset.unscan }).then(function (res) {
+
+    job.then(function (res) {
       if (res.error) throw res.error;
       return loadGuests();
     }).catch(function (error) {
-      show(listError, 'Ongedaan maken is niet gelukt.');
+      show(listError, 'Die actie is niet gelukt. Probeer het opnieuw.');
       console.error(error);
       btn.disabled = false;
     });
   });
 
   document.getElementById('csvBtn').addEventListener('click', function () {
-    var head = ['Voornaam', 'Achternaam', 'E-mail', 'Telefoon', 'Aangemeld op', 'Gescand op', 'Gescand door'];
+    var head = ['Voornaam', 'Achternaam', 'Uitgenodigd door', 'E-mail', 'Telefoon',
+                'Aangemeld op', 'Gescand op', 'Gescand door', 'Geblokkeerd', 'Geblokkeerd op'];
 
     var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
 
     var lines = [head.map(cell).join(';')].concat(guests.map(function (g) {
       return [
-        g.first_name, g.last_name, g.email, g.phone,
+        g.first_name, g.last_name, g.invited_by || '', g.email, g.phone,
         new Date(g.created_at).toLocaleString('nl-NL'),
         g.scanned_at ? new Date(g.scanned_at).toLocaleString('nl-NL') : '',
-        g.scanned_by || ''
+        g.scanned_by || '',
+        g.blocked_at ? 'ja' : 'nee',
+        g.blocked_at ? new Date(g.blocked_at).toLocaleString('nl-NL') : ''
       ].map(cell).join(';');
     }));
 
@@ -433,7 +493,15 @@
 
       if (r.status === 'ok') {
         beep(880, 0.16);
-        showResult('ok', '✓', 'Welkom!', r.first_name + ' ' + r.last_name);
+        showResult('ok', '✓', 'Welkom!',
+          r.first_name + ' ' + r.last_name +
+          (r.invited_by ? ' — uitgenodigd door ' + r.invited_by : ''));
+      } else if (r.status === 'blocked') {
+        // Twee lage tonen achter elkaar: duidelijk anders dan de rest
+        beep(160, 0.3);
+        setTimeout(function () { beep(160, 0.3); }, 340);
+        showResult('blocked', '⛔', 'Geblokkeerd',
+          r.first_name + ' ' + r.last_name + ' mag er niet in.');
       } else if (r.status === 'already') {
         beep(300, 0.4);
         showResult('already', '!', 'Al gescand',
