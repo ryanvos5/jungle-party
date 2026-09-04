@@ -8,7 +8,8 @@
 delete from public.guests
 where email in (
   'test.gast@voorbeeld.nl',
-  'proef.aanmelding@voorbeeld.nl'
+  'proef.aanmelding@voorbeeld.nl',
+  'controle.migratie@voorbeeld.nl'
 );
 
 -- Controle: hier hoort nu niets meer tussen te staan
