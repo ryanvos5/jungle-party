@@ -29,7 +29,7 @@
     <p class="ticket__meta" id="guestMeta"></p>
 
     <div class="qr-frame" id="qrFrame">
-      <canvas id="qr"></canvas>
+      <div id="qr"></div>
     </div>
 
     <div>
@@ -59,8 +59,8 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="assets/vendor/supabase.js"></script>
+<script src="assets/vendor/qrcode.min.js"></script>
 <script src="assets/config.js"></script>
 <script>
 (function () {
@@ -96,14 +96,20 @@
 
   // De QR bevat de ticketlink zelf. Zo opent een gewone telefooncamera
   // het ticket, en de scanner van de organisator haalt het token eruit.
-  QRCode.toCanvas(document.getElementById('qr'), url, {
-    width: 464,
-    margin: 1,
-    errorCorrectionLevel: 'M',
-    color: { dark: '#0a1a10', light: '#ffffff' }
-  }, function (err) {
-    if (err) console.error(err);
-  });
+  // Op dubbele grootte getekend, zodat hij scherp blijft op een
+  // telefoonscherm met hoge resolutie.
+  if (window.QRCode) {
+    new QRCode(document.getElementById('qr'), {
+      text: url,
+      width: 464,
+      height: 464,
+      colorDark: '#0a1a10',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } else {
+    console.error('QR-bibliotheek niet geladen');
+  }
 
   function render(row) {
     nameEl.textContent = row.first_name + ' ' + row.last_name;
@@ -169,11 +175,19 @@
   });
 
   document.getElementById('downloadBtn').addEventListener('click', function () {
-    var canvas = document.getElementById('qr');
-    var name   = (nameEl.textContent || 'ticket').trim().replace(/\s+/g, '-').toLowerCase();
-    var link   = document.createElement('a');
+    var box    = document.getElementById('qr');
+    var canvas = box.querySelector('canvas');
+    var img    = box.querySelector('img');
+
+    // De bibliotheek tekent op een canvas en toont daarna een afbeelding.
+    // Welke van de twee er is, verschilt per browser.
+    var data = canvas ? canvas.toDataURL('image/png') : (img && img.src);
+    if (!data) return;
+
+    var name = (nameEl.textContent || 'ticket').trim().replace(/\s+/g, '-').toLowerCase();
+    var link = document.createElement('a');
     link.download = 'jungle-party-' + name + '.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = data;
     link.click();
   });
 })();
