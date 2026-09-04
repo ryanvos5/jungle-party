@@ -75,6 +75,9 @@
 (function () {
   'use strict';
 
+  // Zonder databaseverbinding toont config.js al een melding.
+  if (!window.db) return;
+
   var form       = document.getElementById('form');
   var btn        = document.getElementById('submitBtn');
   var btnLabel   = document.getElementById('submitLabel');

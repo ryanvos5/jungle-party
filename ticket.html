@@ -66,6 +66,9 @@
 (function () {
   'use strict';
 
+  // Zonder databaseverbinding toont config.js al een melding.
+  if (!window.db) return;
+
   var token = new URLSearchParams(location.search).get('t');
 
   var pageError  = document.getElementById('pageError');
