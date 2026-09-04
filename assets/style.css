@@ -101,6 +101,36 @@ body::before {
   color: transparent;
 }
 
+/* Slogan onder de titel, met dunne lijntjes ernaast die met de
+   tekstbreedte meebewegen. */
+.brand__tagline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.brand__tagline::before,
+.brand__tagline::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 194, 71, .5));
+}
+
+.brand__tagline::after {
+  background: linear-gradient(90deg, rgba(255, 194, 71, .5), transparent);
+}
+
+/* De laatste letter draagt de letterspacing nog mee; die ruimte
+   compenseren zodat de tekst optisch gecentreerd blijft. */
+.brand__tagline span { margin-right: -.26em; }
+
 .brand__sub {
   margin: 12px auto 0;
   max-width: 380px;
