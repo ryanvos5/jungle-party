@@ -7,8 +7,8 @@
 //  in de database.
 // ---------------------------------------------------------------
 window.JUNGLE_CONFIG = {
-  SUPABASE_URL: '__SUPABASE_URL__',
-  SUPABASE_KEY: '__SUPABASE_KEY__',
+  SUPABASE_URL: 'https://bgwberxhqspcdlsmofqe.supabase.co',
+  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnd2JlcnhocXNwY2Rsc21vZnFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjMzOTMsImV4cCI6MjEwNDA5OTM5M30.m5ZBFHUtLazDBGOqYlvEGkoQABy_Gm7g7Wue154T3lM',
 
   // Naam van het feest, wordt overal op de site getoond
   PARTY_NAME: 'Jungle Party',
