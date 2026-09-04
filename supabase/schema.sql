@@ -264,3 +264,6 @@ grant execute on function public.get_ticket(text)                       to anon,
 grant execute on function public.scan_ticket(text)                      to authenticated;
 grant execute on function public.unscan_ticket(uuid)                    to authenticated;
 grant execute on function public.is_owner()                             to authenticated;
+
+-- De API opnieuw laten inlezen, zodat de nieuwe functies meteen bereikbaar zijn
+notify pgrst, 'reload schema';
