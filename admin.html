@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=5">
+<link rel="stylesheet" href="assets/style.css?v=6">
 </head>
 <body>
 
@@ -145,9 +145,28 @@
 
 </div>
 
-<script src="assets/vendor/supabase.js?v=5"></script>
-<script src="assets/vendor/html5-qrcode.min.js?v=5"></script>
-<script src="assets/config.js?v=5"></script>
+<!-- Staat buiten beide weergaven, zodat hij zowel op het inlogscherm
+     als op het dashboard onderaan blijft staan. -->
+<div class="wrap wrap--wide" style="padding-top:0">
+  <div class="tbf-bar">
+    <p class="tbf-pitch">
+      Wil je ook een uitnodigingssysteem voor je feest?
+      <a href="https://www.thebrandingfive.nl" target="_blank" rel="noopener noreferrer">Neem contact op</a>
+    </p>
+    <a class="tbf-credit"
+       href="https://www.thebrandingfive.nl"
+       target="_blank"
+       rel="noopener noreferrer"
+       aria-label="Website gemaakt door TheBrandingFive">
+      <span>Website door</span>
+      <span class="tbf-logo" aria-hidden="true"></span>
+    </a>
+  </div>
+</div>
+
+<script src="assets/vendor/supabase.js?v=6"></script>
+<script src="assets/vendor/html5-qrcode.min.js?v=6"></script>
+<script src="assets/config.js?v=6"></script>
 <script>
 (function () {
   'use strict';

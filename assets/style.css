@@ -599,3 +599,97 @@ tr.is-blocked td:first-child { box-shadow: inset 3px 0 0 var(--block); }
   body { background: #fff; color: #000; }
   .card { border-color: #ccc; box-shadow: none; }
 }
+
+/* ===============================================================
+   TheBrandingFive mini-logo (footer) met shine-effect op hover
+
+   Het logo wordt als CSS-mask gebruikt, zodat de kleur hier bepaald
+   wordt en de lichtveeg over de logo-vorm zelf loopt.
+
+   Geen Tailwind in dit project, dus .tbf-credit:hover vervangt de
+   .group:hover uit de originele opzet. De footer is donker, dus de
+   witte kleurwaarden blijven ongewijzigd.
+
+   Het pad is relatief aan dit CSS-bestand: op GitHub Pages staat de
+   site in een submap, waardoor een absoluut /brand/... pad 404 geeft.
+   =============================================================== */
+
+@keyframes tbf-shine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.tbf-logo {
+  display: inline-block;
+  width: 1.55rem;
+  height: 0.85rem;
+  -webkit-mask: url("brand/thebrandingfive.svg") center / contain no-repeat;
+          mask: url("brand/thebrandingfive.svg") center / contain no-repeat;
+  background-color: rgba(255, 255, 255, 0.45);
+  transition: background-color 0.3s ease;
+}
+
+.tbf-credit:hover .tbf-logo {
+  background-color: transparent;
+  background-image: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.5) 38%,
+    #ffffff 50%,
+    rgba(255, 255, 255, 0.5) 62%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: tbf-shine 0.9s ease-in-out;
+}
+
+/* ---- Balk onderaan de pagina ---- */
+
+.tbf-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.tbf-pitch {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tbf-pitch a {
+  color: var(--lime-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tbf-pitch a:hover { color: var(--lime); }
+
+.tbf-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .35);
+  text-decoration: none;
+  transition: color .3s ease;
+}
+
+.tbf-credit:hover { color: rgba(255, 255, 255, .75); }
+
+/* Vanaf tablet: pitch links, credit rechts */
+@media (min-width: 640px) {
+  .tbf-bar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tbf-pitch { text-align: left; }
+}
