@@ -296,6 +296,8 @@ body::before {
   border: 1px solid rgba(182, 255, 61, .3);
 }
 
+.alert a { color: var(--lime); }
+
 /* ----------------------------- Ticket ------------------------- */
 
 .ticket { text-align: center; }

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="stylesheet" href="assets/style.css?v=5">
 </head>
 <body>
 
@@ -35,6 +35,12 @@
           De organisator controleert de gastenlijst en kan tickets blokkeren.
         </p>
       </div>
+    </div>
+
+    <div class="alert alert--info" id="hasTicket">
+      Je hebt je op dit apparaat al eens aangemeld.
+      <a href="ticket.html" id="myTicketLink"><strong>Bekijk je ticket →</strong></a><br>
+      Meld je iemand anders aan? Vul het formulier gewoon in.
     </div>
 
     <div class="alert alert--error" id="formError"></div>
@@ -87,8 +93,8 @@
 
 </div>
 
-<script src="assets/vendor/supabase.js?v=4"></script>
-<script src="assets/config.js?v=4"></script>
+<script src="assets/vendor/supabase.js?v=5"></script>
+<script src="assets/config.js?v=5"></script>
 <script>
 (function () {
   'use strict';
@@ -103,12 +109,16 @@
 
   var FIELDS = ['first_name', 'last_name', 'email', 'phone', 'invited_by'];
 
-  // Wie zich al eerder aanmeldde op dit apparaat, sturen we direct
-  // door naar het eigen ticket in plaats van een dubbele aanmelding.
-  var known = localStorage.getItem('jungle_token');
+  // Wie zich op dit apparaat al aanmeldde, krijgt een snelkoppeling naar
+  // het eigen ticket. Bewust géén automatische doorverwijzing: dan kun je
+  // op dezelfde telefoon ook iemand anders aanmelden, en blijft het
+  // formulier voor iedereen bereikbaar.
+  var known = null;
+  try { known = localStorage.getItem('jungle_token'); } catch (e) { /* privémodus */ }
+
   if (known) {
-    location.replace('ticket.html?t=' + encodeURIComponent(known));
-    return;
+    document.getElementById('myTicketLink').href = 'ticket.html?t=' + encodeURIComponent(known);
+    document.getElementById('hasTicket').classList.add('show');
   }
 
   function setFieldError(name, message) {
