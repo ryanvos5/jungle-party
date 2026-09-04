@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 </head>
 <body>
 
@@ -22,6 +22,8 @@
   </header>
 
   <div class="alert alert--error" id="pageError"></div>
+
+  <a class="btn" href="index.html" id="backHome" style="display:none">Naar het aanmeldformulier</a>
 
   <div class="card ticket" id="ticketCard" style="display:none">
 
@@ -59,9 +61,9 @@
 
 </div>
 
-<script src="assets/vendor/supabase.js?v=3"></script>
-<script src="assets/vendor/qrcode.min.js?v=3"></script>
-<script src="assets/config.js?v=3"></script>
+<script src="assets/vendor/supabase.js?v=4"></script>
+<script src="assets/vendor/qrcode.min.js?v=4"></script>
+<script src="assets/config.js?v=4"></script>
 <script>
 (function () {
   'use strict';
@@ -70,6 +72,16 @@
   if (!window.db) return;
 
   var token = new URLSearchParams(location.search).get('t');
+
+  // Geen code in de link? Dan kijken we of dit apparaat er nog een kent
+  // van een eerdere aanmelding, en zetten we hem alsnog in de adresbalk.
+  if (!token) {
+    try { token = localStorage.getItem('jungle_token'); } catch (e) { /* privémodus */ }
+    if (token) {
+      location.replace('ticket.html?t=' + encodeURIComponent(token));
+      return;
+    }
+  }
 
   var pageError  = document.getElementById('pageError');
   var card       = document.getElementById('ticketCard');
@@ -80,14 +92,17 @@
   var statusText = document.getElementById('statusText');
   var linkInput  = document.getElementById('ticketLink');
 
+  // Bij een fout altijd een weg terug bieden, anders loopt een gast vast.
   function fail(message) {
     pageError.textContent = message;
     pageError.classList.add('show');
     card.style.display = 'none';
+    document.getElementById('backHome').style.display = '';
   }
 
   if (!token) {
-    fail('Deze link is niet compleet. Gebruik de volledige ticketlink die je bij het aanmelden hebt gekregen.');
+    fail('Er staat geen ticketcode in deze link. Gebruik de volledige link die je bij het aanmelden ' +
+         'hebt gekregen, of meld je hieronder alsnog aan.');
     return;
   }
 
